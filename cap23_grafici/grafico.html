@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+  cap23 — Pagina con grafico interattivo CanvasJS
+  =================================================
+  Carica i dati delle ultime 24 ore dall'endpoint dati.php e li visualizza
+  come grafico a linea con CanvasJS. Questo file è HTML puro (nessun PHP):
+  il recupero dei dati avviene via JavaScript fetch() dopo il caricamento della pagina.
+
+  Requisiti:
+    - dati.php nella stessa directory (fornisce i dati in JSON)
+    - canvasjs.min.js nella stessa directory (libreria grafica)
+      Scaricabile gratuitamente (uso non commerciale) da canvasjs.com/download
+
+  Riferimento: capitolo 23, par. 23.4 e 23.5
+-->
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Decommenta la riga seguente per aggiornare automaticamente ogni 60 secondi -->
+  <!-- <meta http-equiv="refresh" content="60"> -->
+  <title>Grafico IoT — Temperatura</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 16px;
+    }
+    #chartContainer {
+      height: 400px;
+      width: 100%;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #stato {
+      font-size: 13px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Temperatura — ultime 24 ore</h1>
+  <div id="chartContainer"></div>
+  <div id="stato">Caricamento dati in corso...</div>
+
+  <!-- La libreria CanvasJS va caricata PRIMA di usare CanvasJS.Chart -->
+  <script src="canvasjs.min.js"></script>
+
+  <script>
+    /*
+      window.onload garantisce che la libreria CanvasJS sia già caricata
+      e che il div #chartContainer esista nel DOM prima di usarli.
+    */
+    window.onload = function () {
+
+      // fetch() invia una richiesta HTTP GET asincrona verso dati.php
+      // e restituisce una Promise: .then() si attiva quando la risposta arriva.
+      fetch('dati.php')
+        .then(function(risposta) {
+          if (!risposta.ok) {
+            throw new Error('Errore HTTP: ' + risposta.status);
+          }
+          // .json() parsa il corpo della risposta come JSON
+          return risposta.json();
+        })
+        .then(function(dataPoints) {
+
+          document.getElementById('stato').textContent =
+            dataPoints.length + ' misure caricate.';
+
+          // Creazione del grafico CanvasJS con i dataPoints ricevuti
+          var chart = new CanvasJS.Chart("chartContainer", {
+            theme: "light1",
+            animationEnabled: true,
+            zoomEnabled: true,       // selezione con il mouse per ingrandire
+            title: {
+              text: "Temperatura — ultime 24 ore"
+            },
+            axisX: {
+              title: "Ora",
+              valueFormatString: "HH:mm"   // formato dell'asse X: ore e minuti
+            },
+            axisY: {
+              title: "Temperatura (°C)",
+              suffix: " °C"
+            },
+            data: [{
+              type: "spline",              // linea con raccordi curvilinei
+              xValueType: "dateTime",      // i valori x sono timestamp (ms)
+              dataPoints: dataPoints       // array [{x: ms, y: float}, ...]
+            }]
+          });
+
+          chart.render();  // disegna il grafico nel div #chartContainer
+
+        })
+        .catch(function(errore) {
+          document.getElementById('stato').textContent =
+            'Errore nel caricamento dei dati: ' + errore.message;
+        });
+
+    };
+  </script>
+
+</body>
+</html>
